@@ -2,6 +2,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -52,6 +53,13 @@ public class Server extends Thread
 		//os.writeBytes("help");
 	}
 	
+	public String commandInterpreter(String command)
+	{
+		
+		return clientName;
+		
+	}
+	
 	public void run() // listening for client connections
 	{
 		System.out.println("running");
@@ -60,46 +68,53 @@ public class Server extends Thread
 			connection = new ServerSocket(portNumber);
 			while(true)
 			{
+				
 				Socket connectionSocket = connection.accept();
 				BufferedReader inFromClient = new BufferedReader(new InputStreamReader(connectionSocket.getInputStream()));
 				
 				DataOutputStream outToClient = new DataOutputStream(connectionSocket.getOutputStream());
-						
-				if(clientServer)
+				System.out.println("before if statement");
+				if(clientServer) // send to client's server
 				{
-					outToClient.writeBytes("Connected to host server.");
+					System.out.println("clientSErver");
+					outToClient.writeBytes("Connected to host server."+"\n");
 					//String welcomeMessage = inFromClient.readLine();  // welcome message for connecting to client server
 					//System.out.println(welcomeMessage);
 					
 				}
-				else // host server 
+				else // host server receiving connections
 				{
-					try
+					System.out.println("Host Server");
+					
+					String clientType = inFromClient.readLine();
+					
+					if(clientType.equals("host client"+"\n"))
 					{
-						clientAddressFile = new File("clientAddressFile.txt");  // create file if it doesn't exist already
-						clientAddressFile.createNewFile();
+						outToClient.writeBytes("Ready to receive commands" + "\n");
+						boolean connectionClient = true;
+						while(connectionClient)
+						{
+							String command = inFromClient.readLine();
+							
+							String result = commandInterpreter(command);
+						}
 					}
-					catch(Exception e)
+					else
 					{
+						String clientAddress = inFromClient.readLine();  // get the client's address
 						
+						System.out.println("Connected to: " + clientAddress);
+						
+						clientNames.add(clientAddress);
+						
+						outToClient.writeBytes("8091" + "\n");	// send port for new connection
+						FileWriter fileWriter = new FileWriter(clientAddressFile);
+						BufferedWriter bw = new BufferedWriter(fileWriter);
+						bw.write(clientAddress+"\n");
+						bw.close();
 					}
 					
-					Scanner readFile = new Scanner(clientAddressFile);
-					while(readFile.hasNextLine())
-					{
-						System.out.println(readFile.nextLine());
-					}
-					String clientAddress = inFromClient.readLine();  // get the client's address
-					System.out.println("Connected to: " + clientAddress);
 					
-					clientNames.add(clientAddress);
-					
-					outToClient.writeBytes("8091");	// send port for new connection
-					FileWriter fileWriter = new FileWriter(clientAddressFile);
-					BufferedWriter bw = new BufferedWriter(fileWriter);
-					bw.write(clientAddress+"\n");
-					bw.close();
-					readFile.close();
 					connectionSocket.close();
 				}
 				
@@ -116,6 +131,32 @@ public class Server extends Thread
 		Server s = new Server();
 		System.out.println("Starting server");
 		s.start();
+		
+		try // create file if it doesn't exist already
+		{
+			s.clientAddressFile = new File("clientAddressFile.txt");  
+			s.clientAddressFile.createNewFile();
+		}
+		catch(Exception e)
+		{
+			
+		}
+		Scanner readFile;
+		try 
+		{
+			readFile = new Scanner(s.clientAddressFile);
+			while(readFile.hasNextLine())
+			{
+				//System.out.println(readFile.nextLine());
+			}
+			readFile.close();
+		} 
+		catch (FileNotFoundException e) 
+		{
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 		
 		
 		//System.out.println("connected");
